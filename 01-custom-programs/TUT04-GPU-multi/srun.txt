@@ -1,0 +1,2 @@
+srun --container-name=cuda-11.2.2 --container-image='nvcr.io/nvidia/cuda:11.2.2-devel-ubuntu20.04' --pty \
+--gres=gpu:A100:2 ./bin/trueke -l 256 32 -t 4.7 0.1 -a 120 2 500 10 -h 1.0 -s 5000 3000 100 5 1 1 -br 1 2000 -z 7919 -g 2

@@ -1,0 +1,4 @@
+# compile the GPU program
+srun --container-name=cuda-11.2.2 --container-image='nvcr.io/nvidia/cuda:11.2.2-devel-ubuntu20.04' --pty --gres=gpu:A100:1 make
+# run the GPU program
+srun --container-name=cuda-11.2.2 --container-image='nvcr.io/nvidia/cuda:11.2.2-devel-ubuntu20.04' --gres=gpu:A100:1 --pty ./prog 0 $((1024*30)) 1

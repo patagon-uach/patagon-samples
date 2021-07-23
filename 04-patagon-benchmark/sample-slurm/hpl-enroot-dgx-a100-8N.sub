@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH -N 8
+#SBATCH --time=40:00
+#SBATCH --ntasks-per-node=8  
+#SBATCH --job-name "test-hpl.8N"
+#SBATCH --output=enroot-%x.%J.%N.out
+
+DATESTRING=`date "+%Y-%m-%dT%H:%M:%S"`
+
+CONT='nvcr.io/nvidia/hpc-benchmarks:20.10-hpl'
+MOUNT="/path/to/your/custom/dat-files:/workspace/dat-files"
+
+echo "Running on hosts: $(echo $(scontrol show hostname))"
+echo "$DATESTRING"
+
+srun --container-image="${CONT}" --container-mounts="${MOUNT}" hpl.sh --config dgx-a100 --dat /workspace/hpl-linux-x86_64/sample-dat/HPL-dgx-a100-8N.dat
+
+echo "Done"
+echo "$DATESTRING"
