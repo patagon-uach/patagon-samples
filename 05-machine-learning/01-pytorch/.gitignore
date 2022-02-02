@@ -1,0 +1,6 @@
+data/*
+!data/README.md
+
+__pycache__/
+*.swp
+*.swo
