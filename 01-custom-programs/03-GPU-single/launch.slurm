@@ -14,6 +14,6 @@ pwd                         # prints current working directory
 date                        # prints the date and time
 
 # compile the GPU program
-srun --container-name=cuda-11.2.2 --container-image=cuda-11.2.2 make
+srun --container-name=cuda:11.4.2-devel make
 # run the GPU program
-srun --container-name=cuda-11.2.2 --container-image=cuda-11.2.2 ./prog 0 $((1024*30)) 1
+srun --container-name=cuda:11.4.2-devel ./prog 0 $((1024*30)) 1
