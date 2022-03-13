@@ -191,8 +191,8 @@ $ scancel 20471
 ```
 
 Si somos afortunad@s lo veremos en ejecucion inmediatamente. En caso contrario, se encolara hasta que haya recursos disponibles para su ejecucion. \
-Ahora podemos cerrar tranquilamente la sesión `ssh` sin miedo a que se cancele nuestro **job**, **SLURM** se encargará del resto.
+De cualquier manera, ahora podemos cerrar tranquilamente la sesión `ssh` sin miedo a que se cancele nuestro **job**, **SLURM** se encargará del resto.
 
 Con esto damos por concluido el primer tutorial sobre el uso del **Supercomputador Patagon de la UACh**, gracias por leer y les deseamos mucho éxito en sus investigaciones.
 
-Cualquier comentario sobre este documento será bien recibido. Lo pueden hacer llegar al correo del patagon patagon@uach.cl.
+Cualquier comentario sobre este documento será agradecido. Lo pueden hacer llegar al correo del **Patagon** patagon@uach.cl.
