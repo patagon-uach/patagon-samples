@@ -9,7 +9,7 @@
 #SBATCH -e TUT02-CPU-openmp-%j.err          # Write the standard error to file named 'jMPItest-<job_number>.err'
 #SBATCH --nodes=1            	            # Request N nodes
 #SBATCH --ntasks=1 	                        # Request n cores or task per node  
-#SBATCH --cpus-per-task=16                  # CPU Cores per task
+#SBATCH --cpus-per-task=32                  # CPU Cores per task
 #SBATCH --mem=65536            	            # Request MB RAM for JOB
 
 pwd                                         # prints current working directory
@@ -18,4 +18,4 @@ date                                        # prints the date and time
 # compile the program
 srun  make
 # run the program
-srun ./prog $((32768)) 16
+srun ./prog $((2**16)) 32

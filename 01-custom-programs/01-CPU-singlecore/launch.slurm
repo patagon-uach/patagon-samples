@@ -10,5 +10,5 @@
 
 pwd                         # prints current working directory
 date                        # prints the date and time
-
+make
 srun ./prog 16384      		# run the job
