@@ -46,8 +46,8 @@
 /* include MTGP pre-computed parameter sets */
 #include <curand_mtgp32dc_p_11213.h>
 /* Utilities and system includes */
-#include <helper_cuda.h>
-#include <helper_functions.h>
+#include "helper_cuda.h"
+#include "helper_functions.h"
 #include <omp.h>
 #include <nvml.h>
 
