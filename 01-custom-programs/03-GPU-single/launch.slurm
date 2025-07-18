@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # IMPORTANT PARAMS
-#SBATCH -p gpu                       # Submit to which partition
-#SBATCH --gres=gpu:A100:1            # GPU resources, format TYPE:device:quantity 
+#SBATCH -p L40                       # Submit to which partition
+#SBATCH --gpus=1            # GPU resources, format TYPE:device:quantity 
 
 # OTHER PARAMS
 #SBATCH -J TUT03-single-GPU	         # Name the job
@@ -14,6 +14,6 @@ pwd                         # prints current working directory
 date                        # prints the date and time
 
 # compile the GPU program
-srun --container-name=cuda:11.4.2-devel make
+srun --container-workdir=${PWD} --container-name=cuda-12 make
 # run the GPU program
-srun --container-name=cuda:11.4.2-devel ./prog 0 $((1024*30)) 1
+srun --container-workdir=${PWD} --container-name=cuda-12 ./prog 0 $((1024*40)) 1
