@@ -1,4 +1,0 @@
-srun: error: pyxis: --container-name: flag must be "auto", "create", "exec" or "no_exec"
-srun: error: Invalid --container-name argument: cuda:11.4.2-devel
-srun: error: pyxis: --container-name: flag must be "auto", "create", "exec" or "no_exec"
-srun: error: Invalid --container-name argument: cuda:11.4.2-devel
