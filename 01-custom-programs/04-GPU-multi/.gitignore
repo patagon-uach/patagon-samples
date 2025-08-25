@@ -1,5 +1,10 @@
 tags
 server_Makefile
 TODO
-*.out
-*.err
+log/*.out
+log/*.err
+obj/*
+dep/*
+trials/*
+plots/*
+bin/trueke
