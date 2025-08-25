@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <unistd.h>
+#include <omp.h>
 
 void matmul(double *a, double *b, double *c, long n){
     for(int i=0; i<n; ++i){
@@ -40,20 +41,28 @@ int main(int argc, char **argv){
 		fprintf(stderr, "run as ./prog n\n");
         exit(EXIT_FAILURE);
     }
+    double t1,t2;
     long n = atoi(argv[1]);
 	printf("matmul cpu %lu x %lu\n", n, n);
 	printf("Mallocs.............."); fflush(stdout);
+    t1 = omp_get_wtime();
 	double* matA = new double[n*n];
 	double* matB = new double[n*n];
 	double* matC = new double[n*n];
-	printf("done\n"); fflush(stdout);
+    t2 = omp_get_wtime();
+	printf("done: %f secs\n", t2-t1); fflush(stdout);
+
 	printf("Init Matrices........"); fflush(stdout);
+    t1 = omp_get_wtime();
     init(matA, n, 1.0); 
     init(matB, n, 2.0); 
-	printf("done\n"); fflush(stdout);
+    t2 = omp_get_wtime();
+	printf("done: %f secs\n", t2-t1); fflush(stdout);
 	printf("Matmul..............."); fflush(stdout);
+    t1 = omp_get_wtime();
     matmul(matA, matB, matC, n);
-	printf("done\n"); fflush(stdout);
+    t2 = omp_get_wtime();
+	printf("done: %f secs\n", t2-t1); fflush(stdout);
     if(n <= 32){
         printMat(matC, n, "C Mat");
     }
