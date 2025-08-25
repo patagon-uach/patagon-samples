@@ -1,1 +1,1 @@
-srun -p cpu -J TUT02-CPU-openmp -N 1 -n 1 -c 32 --mem=65G --pty ./prog $((1024)) 16
+srun -p cpu -J TUT02-openmp -N 1 -n 1 -c 8 --mem=65G --pty ./prog $((2**13)) 8
