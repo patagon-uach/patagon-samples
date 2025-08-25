@@ -1,0 +1,1 @@
+srun -p cpu --mpi=pmix -c 1 -n 2 --container-workdir=${PWD} make
