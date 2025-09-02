@@ -5,6 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include <random>
+#include <algorithm>       // <-- added
 #include <cblas.h>
 #include <omp.h>
 
@@ -52,7 +53,7 @@ int main(int argc, char **argv) {
   ATYPE *h_A;
   BTYPE *h_B;
   CTYPE *h_C;
-  CPUTYPE *cblasC;
+  CPUTYPE *cblasC = nullptr;
   // device pointers
   ATYPE *d_A = 0;
   BTYPE *d_B = 0;
@@ -104,8 +105,6 @@ int main(int argc, char **argv) {
     printf("False\n");
   #endif
 
-
-
   /* 1) Initialize CUBLAS */
   status = cublasCreate(&handle);
   if (status != CUBLAS_STATUS_SUCCESS){
@@ -113,27 +112,22 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-
   /* 2) Set math mode */
   printf("Compute Type...................%s\n\n", cublasComputeTypesStr[comptype]);
-  //status = cublasSetMathMode(handle, cublasMathModes[0]);
-  if (status != CUBLAS_STATUS_SUCCESS){
-    fprintf(stderr, "!!!! CUBLAS MATH MODE ERROR\n");
-    return EXIT_FAILURE;
-  }
-
+  // (optional) set math mode here if desired with cublasSetMathMode
 
   /* 3) Allocate and fill host memory for the matrices */
   printf("Host mallocs A B C............."); fflush(stdout);
   t1 = omp_get_wtime();
   #ifdef PINNED
-      cudaMallocHost((void**)&h_A, nelem*sizeof(h_A[0]));
-      cudaMallocHost((void**)&h_B, nelem*sizeof(h_B[0]));
-      cudaMallocHost((void**)&h_C, nelem*sizeof(h_C[0]));
+      gpuErrchk(cudaMallocHost((void**)&h_A, nelem*sizeof(h_A[0])));
+      gpuErrchk(cudaMallocHost((void**)&h_B, nelem*sizeof(h_B[0])));
+      gpuErrchk(cudaMallocHost((void**)&h_C, nelem*sizeof(h_C[0])));
   #else
       h_A = (ATYPE*)(malloc(nelem * sizeof(h_A[0])));
       h_B = (BTYPE*)(malloc(nelem * sizeof(h_B[0])));
       h_C = (CTYPE*)(malloc(nelem * sizeof(h_C[0])));
+      if(!h_A || !h_B || !h_C){ fprintf(stderr, "Host malloc failed\n"); return EXIT_FAILURE; }
   #endif
 
   t2 = omp_get_wtime();
@@ -147,7 +141,6 @@ int main(int argc, char **argv) {
   printf("done: %f secs\n", t2-t1); fflush(stdout);
   print_matrix<ATYPE>(h_A, N, N, "MAT A");
   print_matrix<BTYPE>(h_B, N, N, "MAT B");
-
 
   /* 4) Allocate device memory for the matrices */
   printf("Device mallocs A B C..........."); fflush(stdout);
@@ -169,47 +162,37 @@ int main(int argc, char **argv) {
   t2 = omp_get_wtime();
   printf("done: %f secs\n", t2-t1); fflush(stdout);
 
-
-
   /* 5) Initialize the device matrices with the host matrices */
+  // Use cudaMemcpy with size_t byte counts (cublasSetVector uses 32-bit n and overflows here)
   printf("Host -> Device memcpy A........"); fflush(stdout);
   t1 = omp_get_wtime();
-  status = cublasSetVector(nelem, sizeof(h_A[0]), h_A, 1, d_A, 1);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    fprintf(stderr, "!!!! device access error (write A)\n");
-    return EXIT_FAILURE;
+  {
+    size_t bytesA = (size_t)nelem * sizeof(h_A[0]);
+    gpuErrchk(cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice));
   }
   gpuErrchk(cudaDeviceSynchronize());
   t2 = omp_get_wtime();
-  printf("done: %f secs (%f GB/sec)\n", t2-t1, nelem*sizeof(h_A[0])/(1e9 * (t2-t1))); fflush(stdout);
+  printf("done: %f secs (%f GB/sec)\n", t2-t1, (nelem*sizeof(h_A[0]))/(1e9 * (t2-t1))); fflush(stdout);
 
   printf("Host -> Device memcpy B........"); fflush(stdout);
   t1 = omp_get_wtime();
-  status = cublasSetVector(nelem, sizeof(h_B[0]), h_B, 1, d_B, 1);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    fprintf(stderr, "!!!! device access error (write B)\n");
-    return EXIT_FAILURE;
+  {
+    size_t bytesB = (size_t)nelem * sizeof(h_B[0]);
+    gpuErrchk(cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice));
   }
   gpuErrchk(cudaDeviceSynchronize());
   t2 = omp_get_wtime();
-  printf("done: %f secs (%f GB/sec)\n", t2-t1, nelem*sizeof(h_B[0])/(1e9 * (t2-t1))); fflush(stdout);
+  printf("done: %f secs (%f GB/sec)\n", t2-t1, (nelem*sizeof(h_B[0]))/(1e9 * (t2-t1))); fflush(stdout);
 
   printf("Host -> Device memcpy C........"); fflush(stdout);
   t1 = omp_get_wtime();
-  status = cublasSetVector(nelem, sizeof(h_C[0]), h_C, 1, d_C, 1);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    fprintf(stderr, "!!!! device access error (write C)\n");
-    return EXIT_FAILURE;
+  {
+    size_t bytesC = (size_t)nelem * sizeof(h_C[0]);
+    gpuErrchk(cudaMemcpy(d_C, h_C, bytesC, cudaMemcpyHostToDevice));
   }
   gpuErrchk(cudaDeviceSynchronize());
   t2 = omp_get_wtime();
-  printf("done: %f secs (%f GB/sec)\n\n", t2-t1, nelem*sizeof(h_C[0])/(1e9 * (t2-t1))); fflush(stdout);
-
-
-
-
-
-
+  printf("done: %f secs (%f GB/sec)\n\n", t2-t1, (nelem*sizeof(h_C[0]))/(1e9 * (t2-t1))); fflush(stdout);
 
   /* 6) GEMM -> GPU CUBLAS */
   if(mode==1){
@@ -231,62 +214,23 @@ int main(int argc, char **argv) {
       printf("done: %f secs [%f TFLOPS]\n", gputime_ms/1000.0, gpuTFLOPS); fflush(stdout);
   }
 
-
-
-
-
   /* 7) GEMM -> CPU BASIC */
   if(mode == 0){
       cblasC = cblas_compute<CPUTYPE>(N, nelem, alpha, beta, h_A, h_B, dtypeCPU, true); 
-      /*
-      //printf("[CBLAS] Host mallocs A B C............."); fflush(stdout);
-      t1 = omp_get_wtime();
-      cblasA = (CPUTYPE*)(malloc(nelem * sizeof(CPUTYPE)));
-      cblasB = (CPUTYPE*)(malloc(nelem * sizeof(CPUTYPE)));
-      cblasC = (CPUTYPE*)(malloc(nelem * sizeof(CPUTYPE)));
-      t2 = omp_get_wtime();
-      //printf("done: %f secs\n", t2-t1); fflush(stdout);
-      //printf("[CBLAS] Filling matrices in Host......."); fflush(stdout);
-      t1 = omp_get_wtime();
-      copyMatrix<CPUTYPE, ATYPE>(cblasA, h_A, N);
-      copyMatrix<CPUTYPE, BTYPE>(cblasB, h_B, N);
-      t2 = omp_get_wtime();
-      //printf("done: %f secs\n", t2-t1); fflush(stdout);
-      t1 = omp_get_wtime();
-      printf("[CBLAS] CPU GEMM (%6s)......", dtypeCPU); fflush(stdout);
-      #ifdef CPUFP64
-          cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,N,N,N,alpha,cblasA,N,cblasB,N,beta,cblasC,N);
-      #else
-          cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,N,N,N,alpha,cblasA,N,cblasB,N,beta,cblasC,N);
-      #endif
-
-      t2 = omp_get_wtime();
-      double cpuTFLOPS = TFLOP/(t2-t1);
-      printf("done: %f secs [%f TFLOPS]\n\n", t2-t1, cpuTFLOPS); fflush(stdout);
-      print_matrix<CPUTYPE>(cblasC, N, N, "RESULT MAT C (CPU)");
-      */
   }
-
-
-
-
 
   /* 8) Read the result back */
   if(mode == 1){
       printf("Device -> Host memcpy C........"); fflush(stdout);
       t1 = omp_get_wtime();
-      status = cublasGetVector(nelem, sizeof(h_C[0]), d_C, 1, h_C, 1);
-      if (status != CUBLAS_STATUS_SUCCESS) {
-        fprintf(stderr, "!!!! device access error (read C)\n");
-        return EXIT_FAILURE;
+      {
+        size_t bytesC = (size_t)nelem * sizeof(h_C[0]);
+        gpuErrchk(cudaMemcpy(h_C, d_C, bytesC, cudaMemcpyDeviceToHost));
       }
       t2 = omp_get_wtime();
-      printf("done: %f secs (%f GB/sec)\n", t2-t1, nelem*sizeof(h_C[0])/(1e9*(t2-t1))); fflush(stdout);
+      printf("done: %f secs (%f GB/sec)\n", t2-t1, (nelem*sizeof(h_C[0]))/(1e9*(t2-t1))); fflush(stdout);
       print_matrix<CTYPE>(h_C, N, N, "RESULT MAT C (GPU)");
   }
-
-
-
 
   /* 9) Check result against reference */
   if(mode == 1){
@@ -301,11 +245,6 @@ int main(int argc, char **argv) {
               maxError*100.0, TOLERR*100.0, 
               maxError <= TOLERR ? (const char*)"pass" : (const char*) "failed"); fflush(stdout);
   }
-
-
-
-
-
 
   /* 10) Memory clean up */
   #ifdef PINNED
@@ -338,3 +277,4 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 }
+
