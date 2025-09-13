@@ -11,19 +11,39 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+#include <cuda_runtime.h>
+#include <cstdio>
+
 // PRINT GPU INFO
-void print_gpu_specs(int dev){
-    cudaDeviceProp prop;
+static void print_gpu_specs(int dev){
+    cudaDeviceProp prop{};
     cudaGetDeviceProperties(&prop, dev);
+
     printf("Device Number: %d\n", dev);
     printf("  Device name:                  %s\n", prop.name);
-    printf("  Memory:                       %f GB\n", prop.totalGlobalMem/(1024.0*1024.0*1024.0));
+    printf("  Memory:                       %.3f GB\n", prop.totalGlobalMem / (1024.0*1024.0*1024.0));
     printf("  Multiprocessor Count:         %d\n", prop.multiProcessorCount);
     printf("  Concurrent Kernels:           %d\n", prop.concurrentKernels);
-    printf("  Memory Clock Rate:            %d MHz\n", prop.memoryClockRate);
-    printf("  Memory Bus Width:             %d bits\n", prop.memoryBusWidth);
-    printf("  Peak Memory Bandwidth:        %f GB/s\n\n", 2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6);
+
+    int memClockKHz = 0;
+    int busWidthBits = 0;
+    cudaDeviceGetAttribute(&memClockKHz,  cudaDevAttrMemoryClockRate,        dev); // kHz
+    cudaDeviceGetAttribute(&busWidthBits, cudaDevAttrGlobalMemoryBusWidth,   dev); // bits
+
+    if (memClockKHz > 0 && busWidthBits > 0) {
+        double memClockMHz = memClockKHz / 1000.0;
+        double peakGBs     = 2.0 * (memClockKHz / 1e6) * (busWidthBits / 8.0); // DDR assumption
+        printf("  Memory Clock Rate:            %.0f MHz\n", memClockMHz);
+        printf("  Memory Bus Width:             %d bits\n", busWidthBits);
+        printf("  Peak Memory Bandwidth:        %.3f GB/s\n\n", peakGBs);
+    } else {
+        printf("  Memory Clock Rate:            N/A\n");
+        printf("  Memory Bus Width:             N/A\n");
+        printf("  Peak Memory Bandwidth:        N/A\n\n");
+    }
 }
+
+
 
 // CUBLAS ALGORITHMS
 #define NUM_CUBLAS_ALGS 2

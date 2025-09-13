@@ -143,56 +143,58 @@ int main(int argc, char **argv) {
   print_matrix<BTYPE>(h_B, N, N, "MAT B");
 
   /* 4) Allocate device memory for the matrices */
-  printf("Device mallocs A B C..........."); fflush(stdout);
-  t1 = omp_get_wtime();
-  if (cudaMalloc(reinterpret_cast<void **>(&d_A), nelem * sizeof(d_A[0])) != cudaSuccess) {
-        fprintf(stderr, "!!!! device memory allocation error (allocate A)\n");
+  if(mode==1){
+      printf("Device mallocs A B C..........."); fflush(stdout);
+      t1 = omp_get_wtime();
+      if (cudaMalloc(reinterpret_cast<void **>(&d_A), nelem * sizeof(d_A[0])) != cudaSuccess) {
+            fprintf(stderr, "!!!! device memory allocation error (allocate A)\n");
+            return EXIT_FAILURE;
+      }
+
+      if (cudaMalloc(reinterpret_cast<void **>(&d_B), nelem * sizeof(d_B[0])) != cudaSuccess) {
+        fprintf(stderr, "!!!! device memory allocation error (allocate B)\n");
         return EXIT_FAILURE;
-  }
+      }
 
-  if (cudaMalloc(reinterpret_cast<void **>(&d_B), nelem * sizeof(d_B[0])) != cudaSuccess) {
-    fprintf(stderr, "!!!! device memory allocation error (allocate B)\n");
-    return EXIT_FAILURE;
-  }
+      if (cudaMalloc(reinterpret_cast<void **>(&d_C), nelem * sizeof(d_C[0])) != cudaSuccess) {
+        fprintf(stderr, "!!!! device memory allocation error (allocate C)\n");
+        return EXIT_FAILURE;
+      }
+      t2 = omp_get_wtime();
+      printf("done: %f secs\n", t2-t1); fflush(stdout);
 
-  if (cudaMalloc(reinterpret_cast<void **>(&d_C), nelem * sizeof(d_C[0])) != cudaSuccess) {
-    fprintf(stderr, "!!!! device memory allocation error (allocate C)\n");
-    return EXIT_FAILURE;
-  }
-  t2 = omp_get_wtime();
-  printf("done: %f secs\n", t2-t1); fflush(stdout);
+      /* 5) Initialize the device matrices with the host matrices */
+      // Use cudaMemcpy with size_t byte counts (cublasSetVector uses 32-bit n and overflows here)
+      printf("Host -> Device memcpy A........"); fflush(stdout);
+      t1 = omp_get_wtime();
+      {
+        size_t bytesA = (size_t)nelem * sizeof(h_A[0]);
+        gpuErrchk(cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice));
+      }
+      gpuErrchk(cudaDeviceSynchronize());
+      t2 = omp_get_wtime();
+      printf("done: %f secs (%f GB/sec)\n", t2-t1, (nelem*sizeof(h_A[0]))/(1e9 * (t2-t1))); fflush(stdout);
 
-  /* 5) Initialize the device matrices with the host matrices */
-  // Use cudaMemcpy with size_t byte counts (cublasSetVector uses 32-bit n and overflows here)
-  printf("Host -> Device memcpy A........"); fflush(stdout);
-  t1 = omp_get_wtime();
-  {
-    size_t bytesA = (size_t)nelem * sizeof(h_A[0]);
-    gpuErrchk(cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice));
-  }
-  gpuErrchk(cudaDeviceSynchronize());
-  t2 = omp_get_wtime();
-  printf("done: %f secs (%f GB/sec)\n", t2-t1, (nelem*sizeof(h_A[0]))/(1e9 * (t2-t1))); fflush(stdout);
+      printf("Host -> Device memcpy B........"); fflush(stdout);
+      t1 = omp_get_wtime();
+      {
+        size_t bytesB = (size_t)nelem * sizeof(h_B[0]);
+        gpuErrchk(cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice));
+      }
+      gpuErrchk(cudaDeviceSynchronize());
+      t2 = omp_get_wtime();
+      printf("done: %f secs (%f GB/sec)\n", t2-t1, (nelem*sizeof(h_B[0]))/(1e9 * (t2-t1))); fflush(stdout);
 
-  printf("Host -> Device memcpy B........"); fflush(stdout);
-  t1 = omp_get_wtime();
-  {
-    size_t bytesB = (size_t)nelem * sizeof(h_B[0]);
-    gpuErrchk(cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice));
+      printf("Host -> Device memcpy C........"); fflush(stdout);
+      t1 = omp_get_wtime();
+      {
+        size_t bytesC = (size_t)nelem * sizeof(h_C[0]);
+        gpuErrchk(cudaMemcpy(d_C, h_C, bytesC, cudaMemcpyHostToDevice));
+      }
+      gpuErrchk(cudaDeviceSynchronize());
+      t2 = omp_get_wtime();
+      printf("done: %f secs (%f GB/sec)\n\n", t2-t1, (nelem*sizeof(h_C[0]))/(1e9 * (t2-t1))); fflush(stdout);
   }
-  gpuErrchk(cudaDeviceSynchronize());
-  t2 = omp_get_wtime();
-  printf("done: %f secs (%f GB/sec)\n", t2-t1, (nelem*sizeof(h_B[0]))/(1e9 * (t2-t1))); fflush(stdout);
-
-  printf("Host -> Device memcpy C........"); fflush(stdout);
-  t1 = omp_get_wtime();
-  {
-    size_t bytesC = (size_t)nelem * sizeof(h_C[0]);
-    gpuErrchk(cudaMemcpy(d_C, h_C, bytesC, cudaMemcpyHostToDevice));
-  }
-  gpuErrchk(cudaDeviceSynchronize());
-  t2 = omp_get_wtime();
-  printf("done: %f secs (%f GB/sec)\n\n", t2-t1, (nelem*sizeof(h_C[0]))/(1e9 * (t2-t1))); fflush(stdout);
 
   /* 6) GEMM -> GPU CUBLAS */
   if(mode==1){
