@@ -79,12 +79,15 @@ int main(int argc, char **argv) {
   const char* dtypeCStr = dataTypesStr[hmap(bitsC)];
   const char* dtypeCPU = cblasDataTypesStr[cpuhmap(bitsCPU)];
 
-  gpuErrchk(cudaSetDevice(dev));
-  print_gpu_specs(dev);
+  if(mode==1){
+    gpuErrchk(cudaSetDevice(dev));
+    print_gpu_specs(dev);
+  }
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
   cublasHandle_t handle;
+
   omp_set_num_threads(nt);
   printf("Matrix size %i x %i --> %lu elements\n"
           "GPU: A FP%i (%10s), B FP%i (%10s), C FP%i (%10s)\n"
@@ -97,7 +100,7 @@ int main(int argc, char **argv) {
           bitsCPU, dtypeCPU,
           bitsCPU, dtypeCPU);
 
-  printf("GPU Mem used...................%f GB\n", GBytesUsed); fflush(stdout);
+  printf("Mem used...................%f GB\n", GBytesUsed); fflush(stdout);
   printf("Pinned Mem.....................");
   #ifdef PINNED
     printf("True\n");
@@ -106,23 +109,27 @@ int main(int argc, char **argv) {
   #endif
 
   /* 1) Initialize CUBLAS */
-  status = cublasCreate(&handle);
-  if (status != CUBLAS_STATUS_SUCCESS){
-    fprintf(stderr, "!!!! CUBLAS initialization error\n");
-    return EXIT_FAILURE;
-  }
+  if(mode==1){
+        status = cublasCreate(&handle);
+        if (status != CUBLAS_STATUS_SUCCESS){
+        fprintf(stderr, "!!!! CUBLAS initialization error\n");
+        return EXIT_FAILURE;
+        }
 
-  /* 2) Set math mode */
-  printf("Compute Type...................%s\n\n", cublasComputeTypesStr[comptype]);
-  // (optional) set math mode here if desired with cublasSetMathMode
+      /* 2) Set math mode */
+      printf("Compute Type...................%s\n\n", cublasComputeTypesStr[comptype]);
+      // (optional) set math mode here if desired with cublasSetMathMode
+  }
 
   /* 3) Allocate and fill host memory for the matrices */
   printf("Host mallocs A B C............."); fflush(stdout);
   t1 = omp_get_wtime();
   #ifdef PINNED
-      gpuErrchk(cudaMallocHost((void**)&h_A, nelem*sizeof(h_A[0])));
-      gpuErrchk(cudaMallocHost((void**)&h_B, nelem*sizeof(h_B[0])));
-      gpuErrchk(cudaMallocHost((void**)&h_C, nelem*sizeof(h_C[0])));
+      if(mode==1){
+          gpuErrchk(cudaMallocHost((void**)&h_A, nelem*sizeof(h_A[0])));
+          gpuErrchk(cudaMallocHost((void**)&h_B, nelem*sizeof(h_B[0])));
+          gpuErrchk(cudaMallocHost((void**)&h_C, nelem*sizeof(h_C[0])));
+      }
   #else
       h_A = (ATYPE*)(malloc(nelem * sizeof(h_A[0])));
       h_B = (BTYPE*)(malloc(nelem * sizeof(h_B[0])));
@@ -250,33 +257,37 @@ int main(int argc, char **argv) {
 
   /* 10) Memory clean up */
   #ifdef PINNED
-      cudaFreeHost(h_A);
-      cudaFreeHost(h_B);
-      cudaFreeHost(h_C);
+      if(mode==1){
+          cudaFreeHost(h_A);
+          cudaFreeHost(h_B);
+          cudaFreeHost(h_C);
+      }
   #else
       free(h_A);
       free(h_B);
       free(h_C);
   #endif
 
-  if (cudaFree(d_A) != cudaSuccess) {
-    fprintf(stderr, "!!!! memory free error (A)\n");
-    return EXIT_FAILURE;
-  }
-  if (cudaFree(d_B) != cudaSuccess) {
-    fprintf(stderr, "!!!! memory free error (B)\n");
-    return EXIT_FAILURE;
-  }
-  if (cudaFree(d_C) != cudaSuccess) {
-    fprintf(stderr, "!!!! memory free error (C)\n");
-    return EXIT_FAILURE;
-  }
+  if(mode==1){
+      if (cudaFree(d_A) != cudaSuccess) {
+        fprintf(stderr, "!!!! memory free error (A)\n");
+        return EXIT_FAILURE;
+      }
+      if (cudaFree(d_B) != cudaSuccess) {
+        fprintf(stderr, "!!!! memory free error (B)\n");
+        return EXIT_FAILURE;
+      }
+      if (cudaFree(d_C) != cudaSuccess) {
+        fprintf(stderr, "!!!! memory free error (C)\n");
+        return EXIT_FAILURE;
+      }
 
-  /* 11) Shutdown */
-  status = cublasDestroy(handle);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    fprintf(stderr, "!!!! shutdown error (A)\n");
-    return EXIT_FAILURE;
+      /* 11) Shutdown */
+      status = cublasDestroy(handle);
+      if (status != CUBLAS_STATUS_SUCCESS) {
+        fprintf(stderr, "!!!! shutdown error (A)\n");
+        return EXIT_FAILURE;
+      }
   }
 }
 
