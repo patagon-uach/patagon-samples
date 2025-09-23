@@ -23,14 +23,16 @@ A CUBLAS Matrix Multiply (GEMM) example.
 
 ## Run:
     a) Run:
-        run as ./prog dev nt n comptype mode
+        run as ./prog dev nt n reps comptype mode
+
         dev:      Device ID
         nt:       Number of CPU threads (accelerates data init and CPU mode)
         n:        Matrix size of n x n
         comptype: GPU CUBLAS mode
         mode:     CPU=0,  GPU=1
+        reps:     number of consecutive repeats of the computation
 
-    b) CUBLAS Compute Types:
+    b) CUBLAS Compute Types (comptype):
             0  = CUBLAS_COMPUTE_16F
             1  = CUBLAS_COMPUTE_16F_PEDANTIC
             2  = CUBLAS_COMPUTE_32F
@@ -45,21 +47,31 @@ A CUBLAS Matrix Multiply (GEMM) example.
 
 ## Example executions:
     a) [GPU CUBLAS] Default CUBLAS math (FP32 CUDA cores)
+        ```
         make ATYPE=float BTYPE=float CTYPE=float
-        ./prog 0 4 $((2**13)) 2 1
+        ./prog 0 4 $((2**13)) 1 2 1
+        ```
 
     b) [GPU CUBLAS] Tensor Cores with mixed precision
+       ```
         make ATYPE=half BTYPE=half CTYPE=float
-        ./prog 0 4 $((2**13)) 4 1
+        ./prog 0 4 $((2**13)) 1 4 1
+        ```
 
     c) [GPU CUBLAS] Tensor Cores with FP16
+        ```
         make ATYPE=half BTYPE=half CTYPE=half
-        ./prog 0 4 $((2**13)) 0 1
+        ./prog 0 4 $((2**13)) 1 0 1
+        ```
 
-    d) [CPU CBLAS] FP32 Using 8 CPU threads 
+    d) [CPU CBLAS] FP32 Using 8 CPU threads, 8 repeats
+        ```
         make
-        ./prog 0 8 $((2**13)) 0 0
+        ./prog 0 8 $((2**13)) 8 0 0
+        ```
 
-    e) [CPU CBLAS] FP64 Using 8 CPU threads 
+    e) [CPU CBLAS] FP64 Using 8 CPU threads, 10 repeats 
+        ```
         make CPUFP64=CPUFP64
-        ./prog 0 8 $((2**13)) 0 0
+        ./prog 0 8 $((2**13)) 10 0 0
+        ```

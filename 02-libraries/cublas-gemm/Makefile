@@ -1,6 +1,6 @@
 INCDIR=
 LIBDIR=
-ARCH=sm_120
+ARCH=sm_80
 # possible types: half | float | double
 ATYPE=float
 BTYPE=float
